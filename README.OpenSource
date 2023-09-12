@@ -1,7 +1,7 @@
 [
     {
-        "Name": "chromium_third_party_ruy",                   # 上游开源软件名全称
-        "License": "graphviz"        # 上游开源软件中包含的许可证信息
+        "Name": "ruy",                   # 上游开源软件名全称
+        "License":       # 上游开源软件中包含的许可证信息
         "License File": "LICENSE"        # 许可证所在文件路径
         "Version Number": "2d950b3bfa7ebfbe7a97ecb44b1cc4da5ac1d6f0",
         "Upstream URL": "https://chromium.googlesource.com/external/github.com/google/ruy.git@2d950b3bfa7ebfbe7a97ecb44b1cc4da5ac1d6f0",   # 上游软件包发布地址
