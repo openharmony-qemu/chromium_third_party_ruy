@@ -39,7 +39,7 @@ bool CpuInfo::EnsureInitialized() {
 }
 
 namespace {
-void QueryCacheParams(CpuCacheParams* cache_params) {
+bool QueryCacheParams(CpuCacheParams* cache_params) {
   const int processors_count = cpuinfo_get_processors_count();
   RUY_DCHECK_GT(processors_count, 0);
   int overall_local_cache_size = std::numeric_limits<int>::max();
@@ -57,13 +57,18 @@ void QueryCacheParams(CpuCacheParams* cache_params) {
                    // L2.
       }
       if (!cache->processor_count) {
-        continue;  // crashes from Chrome on Android suggests that might happen?
+        // This may happen in a sand-boxed process, e.g.: a browser renderer.
+        continue;
       }
-      const bool is_local =
-          cpuinfo_get_processor(cache->processor_start)->core ==
-          cpuinfo_get_processor(cache->processor_start +
-                                cache->processor_count - 1)
-              ->core;
+      const cpuinfo_processor* processor_start =
+          cpuinfo_get_processor(cache->processor_start);
+      const cpuinfo_processor* processor_end = cpuinfo_get_processor(
+          cache->processor_start + cache->processor_count - 1);
+      if (!processor_start || !processor_end) {
+        // This may happen in a sand-boxed process, e.g.: a browser renderer.
+        continue;
+      }
+      const bool is_local = processor_start->core == processor_end->core;
       if (is_local) {
         local_cache_size = cache->size;
       }
@@ -73,8 +78,9 @@ void QueryCacheParams(CpuCacheParams* cache_params) {
     if (!local_cache_size) {
       local_cache_size = last_level_cache_size;
     }
-    RUY_DCHECK_GT(local_cache_size, 0);
-    RUY_DCHECK_GT(last_level_cache_size, 0);
+    if (local_cache_size == 0 || last_level_cache_size == 0) {
+      return false;
+    }
     RUY_DCHECK_GE(last_level_cache_size, local_cache_size);
     overall_local_cache_size =
         std::min(overall_local_cache_size, local_cache_size);
@@ -83,6 +89,7 @@ void QueryCacheParams(CpuCacheParams* cache_params) {
   }
   cache_params->local_cache_size = overall_local_cache_size;
   cache_params->last_level_cache_size = overall_last_level_cache_size;
+  return true;
 }
 }  // end namespace
 
@@ -92,7 +99,10 @@ CpuInfo::InitStatus CpuInfo::Initialize() {
     MakeDummyCacheParams(&cache_params_);
     return InitStatus::kFailed;
   }
-  QueryCacheParams(&cache_params_);
+  if (!QueryCacheParams(&cache_params_)) {
+    MakeDummyCacheParams(&cache_params_);
+    return InitStatus::kFailed;
+  }
   return InitStatus::kInitialized;
 }
 
@@ -126,7 +136,12 @@ bool CpuInfo::CurrentCpuIsA55ish() {
     return false;
   }
 
-  switch (cpuinfo_get_uarch(cpuinfo_get_current_uarch_index())->uarch) {
+  const struct cpuinfo_uarch_info* cpuinfo_uarch =
+      cpuinfo_get_uarch(cpuinfo_get_current_uarch_index());
+  if (!cpuinfo_uarch) {
+    return false;
+  }
+  switch (cpuinfo_uarch->uarch) {
     case cpuinfo_uarch_cortex_a53:
     case cpuinfo_uarch_cortex_a55r0:
     case cpuinfo_uarch_cortex_a55:
@@ -140,8 +155,12 @@ bool CpuInfo::CurrentCpuIsX1() {
   if (!EnsureInitialized()) {
     return false;
   }
-  if (cpuinfo_get_uarch(cpuinfo_get_current_uarch_index())->uarch ==
-      cpuinfo_uarch_cortex_x1) {
+  const struct cpuinfo_uarch_info* cpuinfo_uarch =
+      cpuinfo_get_uarch(cpuinfo_get_current_uarch_index());
+  if (!cpuinfo_uarch) {
+    return false;
+  }
+  if (cpuinfo_uarch->uarch == cpuinfo_uarch_cortex_x1) {
     return true;
   }
   return false;
