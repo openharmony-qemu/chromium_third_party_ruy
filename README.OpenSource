@@ -1,0 +1,11 @@
+[
+    {
+        "Name": "ruy",
+        "License": "Apache-2.0",
+        "License File": "LICENSE",
+        "Version Number": "c08ec529fc91722bde519628d9449258082eb847",
+        "Owner": "huamengzheng@huawei.com",
+        "Upstream URL": "https://chromium.googlesource.com/external/github.com/google/ruy.git@c08ec529fc91722bde519628d9449258082eb847",
+        "Description": "第三方软件ruy，一种基于Python语言的软件定义网络控制器"
+    }
+]
